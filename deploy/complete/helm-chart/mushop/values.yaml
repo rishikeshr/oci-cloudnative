@@ -1,37 +1,89 @@
 global:
   mock:
     service: "false"
-  osb:
-    instanceName: mushop
-  ociAuthSecret:
-  ossStreamSecret:
-  oadbService:
-  oadbAdminSecret:
-  oadbWalletSecret:
-  oadbConnectionSecret:
-  oosBucketSecret:
+  # PostgreSQL Configuration
+  postgres:
+    host: postgres
+    port: 5432
+    user: mushop
+    password: mushop
+  # MinIO Configuration
+  minio:
+    endpoint: minio
+    port: 9000
+    accessKey: minioadmin
+    secretKey: minioadmin
+    useSSL: false
+  # Kafka Configuration
+  kafka:
+    brokers: kafka:9092
+    topic: mushop-events
+  # NATS Configuration
+  nats:
+    host: nats
+    port: 4222
+  # Kubernetes specific
   okeVirtualNodesSupport: false
 
-# Depending on the scenario, certain resources might need to be skipped.
-# For example, --set tags.streaming=false to disable required streaming manifests
+# Depending on the scenario, certain resources might need to be skipped
 tags:
-  streaming: true
-  atp: true
+  streaming: true   # Kafka streaming
+  database: true    # PostgreSQL
 
 ingress:
   enabled: true
 
+# Infrastructure Dependencies
+# These can be enabled to deploy infrastructure services alongside the application
+# Or set to false if using external managed services
+postgresql:
+  enabled: true
+  auth:
+    username: mushop
+    password: mushop
+    database: mushop
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+kafka:
+  enabled: true
+  replicaCount: 1
+  zookeeper:
+    enabled: true
+
+minio:
+  enabled: true
+  mode: standalone
+  rootUser: minioadmin
+  rootPassword: minioadmin
+  persistence:
+    enabled: true
+    size: 10Gi
+
+nats:
+  enabled: true
+
+# Application Services
 api:
   enabled: true
 
 assets:
   enabled: true
+  minio:
+    bucket: mushop-assets
 
 carts:
   enabled: true
+  postgres:
+    database: mushop_carts
+    table: carts
 
 catalogue:
   enabled: true
+  postgres:
+    database: mushop_catalogue
 
 edge:
   enabled: true
@@ -41,6 +93,8 @@ events:
 
 orders:
   enabled: true
+  postgres:
+    database: mushop_orders
 
 payment:
   enabled: true
@@ -54,18 +108,7 @@ storefront:
 fulfillment:
   enabled: true
 
-nats:
-  enabled: true
-
 user:
   enabled: true
-
-secrets:
-  streams:
-    streamId:
-    messageEndpoint:
-  bucket:
-    region:
-    name:
-    namespace:
-    par:
+  postgres:
+    database: mushop_user
