@@ -286,6 +286,25 @@ services:
     networks:
       - mushop
 
+  # Newsletter Service
+  newsletter:
+    build:
+      context: ./src/newsletter
+      dockerfile: Dockerfile
+    container_name: mushop-newsletter
+    depends_on:
+      - mailhog
+    environment:
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USER=test
+      - SMTP_PASSWORD=test
+      - APPROVED_SENDER_EMAIL=noreply@mushop.com
+    ports:
+      - "3002:3000"
+    networks:
+      - mushop
+
   # API Service (BFF - Backend for Frontend)
   api:
     build:

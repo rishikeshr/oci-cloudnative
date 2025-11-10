@@ -1,11 +1,55 @@
 # ![MuShop Logo](./images/logo.png#gh-light-mode-only)![MuShop Logo - Dark Mode](./images/logo-inverse.png#gh-dark-mode-only)
 
-MuShop is a showcase of several [Oracle Cloud Infrastructure][oci] services in a unified reference application. The sample application implements an e-commerce platform built as a set of micro-services. The accompanying content can be used to get started with cloud native application development on [Oracle Cloud Infrastructure][oci].
+MuShop is a complete e-commerce platform built as a set of microservices, demonstrating modern cloud-native application development practices. The application has been refactored to be **cloud-agnostic**, using open-source technologies instead of proprietary cloud services.
 
 | ![home](./images/screenshot/mushop.home.png) | ![browse](./images/screenshot/mushop.browse.png) | ![cart](./images/screenshot/mushop.cart.png) | ![about](./images/screenshot/mushop.about.png) |
 |---|---|---|---|
 
-MuShop can be deployed in different ways to explore [Oracle Cloud Infrastructure][oci] based on your subscription. Both deployment models can be used with trial subscriptions. However, [Oracle Cloud Infrastructure][oci] offers an *Always Free* tier with resources that can be used indefinitely.
+## 🚀 Quick Start - Cloud-Agnostic Deployment
+
+**New!** MuShop now runs on any cloud platform or locally using standard open-source technologies:
+
+- **PostgreSQL** instead of Oracle Autonomous Database
+- **MinIO** instead of OCI Object Storage
+- **Apache Kafka** instead of OCI Streaming
+- **NATS** for messaging
+- **Mailhog** for SMTP (development)
+
+### Deploy Locally with Docker Compose
+
+```bash
+# Clone the repository
+git clone https://github.com/oracle-quickstart/oci-cloudnative.git
+cd oci-cloudnative
+
+# Start all services
+docker-compose up -d
+
+# Access the application
+open http://localhost:8086
+```
+
+**📖 See [DOCKER-COMPOSE-README.md](./DOCKER-COMPOSE-README.md) for complete local development guide**
+
+### Deploy to Kubernetes
+
+```bash
+# Using Helm (recommended)
+helm install mushop ./deploy/complete/helm-chart/mushop \
+  --set global.postgres.host=your-postgres-host \
+  --set global.postgres.password=your-password
+
+# Or using kubectl
+kubectl apply -f deploy/complete/kubernetes/
+```
+
+**📖 See [MIGRATION-SUMMARY.md](./MIGRATION-SUMMARY.md) for complete migration details**
+
+---
+
+## Legacy OCI Deployment Options
+
+MuShop can also be deployed on [Oracle Cloud Infrastructure][oci] using OCI-managed services. Both deployment models can be used with trial subscriptions. However, [Oracle Cloud Infrastructure][oci] offers an *Always Free* tier with resources that can be used indefinitely.
 
 | [Basic: `deploy/basic`](#Getting-Started-with-MuShop-Basic) | [Complete: `deploy/complete`](#Getting-Started-with-MuShop-Complete) |
 |---|---|
