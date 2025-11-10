@@ -26,27 +26,33 @@ public class DataSourceConfiguration {
     @Autowired
     private Environment env;
 
-    @Value("${mushop.orders.oadbservice}")
-    private String db_Name;
+    @Value("${mushop.orders.postgres.host}")
+    private String db_host;
 
-    @Value("${mushop.orders.oadbuser}")
+    @Value("${mushop.orders.postgres.port}")
+    private String db_port;
+
+    @Value("${mushop.orders.postgres.database}")
+    private String db_database;
+
+    @Value("${mushop.orders.postgres.user}")
     private String db_user;
 
-    @Value("${mushop.orders.oadbpw}")
+    @Value("${mushop.orders.postgres.password}")
     private String db_pass;
-     
+
     @Bean
     public DataSource getDataSource(MeterRegistry registry) {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
         //
-        if("Mock".equalsIgnoreCase(db_Name)) {
+        if("mock".equalsIgnoreCase(db_host)) {
             dataSourceBuilder.driverClassName("org.h2.Driver");
             dataSourceBuilder.url("jdbc:h2:mem:test");
             dataSourceBuilder.username("SA");
             dataSourceBuilder.password("");
         }else{
-            dataSourceBuilder.driverClassName("oracle.jdbc.OracleDriver");
-            dataSourceBuilder.url("jdbc:oracle:thin:@"+db_Name+"?TNS_ADMIN=${TNS_ADMIN}");
+            dataSourceBuilder.driverClassName("org.postgresql.Driver");
+            dataSourceBuilder.url(String.format("jdbc:postgresql://%s:%s/%s", db_host, db_port, db_database));
             dataSourceBuilder.username(db_user);
             dataSourceBuilder.password(db_pass);
         }

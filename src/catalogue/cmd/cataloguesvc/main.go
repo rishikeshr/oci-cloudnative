@@ -27,7 +27,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/weaveworks/common/middleware"
-	_ "github.com/godror/godror"
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -50,7 +50,7 @@ func main() {
 	var (
 		port          = flag.String("port", getEnv("CATALOGUE_PORT", "80"), "Port to bind HTTP listener")
 		images        = flag.String("images", "./images/", "Image path")
-		connectString = flag.String("CONNECTSTRING", os.Getenv("OADB_USER")+"/"+os.Getenv("OADB_PW")+"@"+os.Getenv("OADB_SERVICE"), "Connection String: [username[/password]@][tnsname]]")
+		connectString = flag.String("CONNECTSTRING", getEnv("DATABASE_URL", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", getEnv("POSTGRES_HOST", "localhost"), getEnv("POSTGRES_PORT", "5432"), getEnv("POSTGRES_USER", "mushop"), getEnv("POSTGRES_PASSWORD", "mushop"), getEnv("POSTGRES_DB", "mushop_catalogue"))), "PostgreSQL connection string")
 		zip           = flag.String("zipkin", os.Getenv("ZIPKIN"), "Zipkin address")
 	)
 	flag.Parse()
@@ -109,7 +109,7 @@ func main() {
 	}
 
 	// Data domain.
-	db, err := sqlx.Open("godror", *connectString)
+	db, err := sqlx.Open("postgres", *connectString)
 	if err != nil {
 		logger.Log("err", err)
 		os.Exit(1)

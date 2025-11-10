@@ -1,8 +1,5 @@
-# Oracle Instant Client version
-ARG oracleClientVersion=19.3
-
 # Node version
-ARG nodeVersion=10
+ARG nodeVersion=16
 
 # Node ENV
 ARG nodeEnv
@@ -13,13 +10,7 @@ ARG httpProxy
 ################################
 #    ----- Base Image -----    #
 ################################
-FROM oraclelinux:7-slim AS base
-ARG oracleClientVersion
-ARG nodeVersion
-RUN yum -y install oracle-release-el7 oracle-nodejs-release-el7 && \
-  yum-config-manager --disable ol7_developer_EPEL && \
-  yum -y install oracle-instantclient${oracleClientVersion}-basiclite nodejs && \
-  rm -rf /var/cache/yum
+FROM node:${nodeVersion}-alpine AS base
 
 #################################
 #    ----- Build Image -----    #
@@ -61,7 +52,6 @@ ENV NODE_ENV ${nodeEnv:-"production"}
 WORKDIR /usr/src/app
 COPY --from=node-build /usr/src/app .
 
-VOLUME ["/usr/lib/oracle/${oracleClientVersion}/client64/lib/network/admin/"]
 ENV PORT 3000
 EXPOSE 3000
 
