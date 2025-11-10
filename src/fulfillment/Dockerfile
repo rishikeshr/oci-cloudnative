@@ -31,6 +31,7 @@ RUN native-image \
     --no-server \
     --allow-incomplete-classpath \
     -H:+ReportExceptionStackTraces \
+    --initialize-at-run-time=com.sun.jndi.dns.DnsClient \
     -cp libs/fulfillment-*-all.jar
 
 # Step 4 : Build the final application image
