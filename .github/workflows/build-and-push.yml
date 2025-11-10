@@ -51,7 +51,7 @@ jobs:
           - name: fulfillment
             context: ./src/fulfillment
             dockerfile: ./src/fulfillment/Dockerfile
-            platforms: linux/amd64
+            platforms: linux/amd64,linux/arm64
           - name: events
             context: ./src/events
             dockerfile: ./src/events/Dockerfile

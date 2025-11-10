@@ -2,7 +2,7 @@ ARG APPLICATION_NAME="fulfillment"
 ARG VERSION="0.0.1-SNAPSHOT"
 
 # Stage 1 : Setup the build environment
-FROM gradle:6.5-jdk11 as buildenv
+FROM gradle:7.6-jdk11 as buildenv
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
@@ -18,26 +18,22 @@ FROM buildenv as appbuild
 # Copy the source code.
 # This layer is recreated only when there are actual source chnages
 COPY src /usr/src/app/src
-# build an executable fat jar
-RUN gradle clean assemble
+# build an executable fat jar using shadowJar
+RUN gradle clean shadowJar -x test
 
-# Stage 3 : Build a native image using GraalVM
-FROM ghcr.io/graalvm/graalvm-ce:ol8-java11-22.3.0 as graalvm
-COPY --from=appbuild /usr/src/app/build /home/app/fulfillment
-WORKDIR /home/app/fulfillment/
-RUN gu install native-image
-RUN native-image \
-    --no-fallback \
-    --no-server \
-    --allow-incomplete-classpath \
-    -H:+ReportExceptionStackTraces \
-    --initialize-at-run-time=com.sun.jndi.dns.DnsClient \
-    -cp libs/fulfillment-*-all.jar
+# Stage 3 : Application container using OpenJDK
+FROM eclipse-temurin:11-jre-jammy
+ARG APPLICATION_NAME
+ARG VERSION
 
-# Step 4 : Build the final application image
-FROM frolvlad/alpine-glibc:latest
-RUN apk update && apk add libstdc++ && rm -rf /var/cache/apk/*
+# Copy the generated shadow JAR (fat jar)
+COPY --from=appbuild /usr/src/app/build/libs/${APPLICATION_NAME}-*-all.jar /app/${APPLICATION_NAME}.jar
+
 EXPOSE 80
-COPY --from=graalvm /home/app/fulfillment/fulfillment /app/fulfillment
-ENTRYPOINT ["/app/fulfillment", "-Djava.library.path=/app"]
+WORKDIR /app
+
+ENV APPLICATION_NAME=${APPLICATION_NAME}
+ENV VERSION=${VERSION}
+
+ENTRYPOINT ["java", "-jar", "/app/fulfillment.jar"]
 
