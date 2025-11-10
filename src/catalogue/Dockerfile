@@ -33,8 +33,8 @@ ARG TARGETPLATFORM
 # Install ca-certificates for HTTPS connections
 RUN apk --no-cache add ca-certificates
 
-RUN addgroup -g 687467 -S app && \
-    adduser -u 687467 -S app -G app
+RUN addgroup -g 1000 -S app && \
+    adduser -u 1000 -S app -G app
 
 WORKDIR /app
 COPY --from=go-builder --chown=app:app /catalogue /app/
