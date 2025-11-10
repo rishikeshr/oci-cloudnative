@@ -17,19 +17,204 @@ MuShop is a complete e-commerce platform built as a set of microservices, demons
 
 ### Deploy Locally with Docker Compose
 
+The easiest way to run MuShop locally is using Docker Compose, which sets up the complete application stack including all microservices and infrastructure components.
+
+#### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) 20.10 or later
+- [Docker Compose](https://docs.docker.com/compose/install/) 1.29 or later
+- At least 8GB of RAM allocated to Docker
+- 10GB of free disk space
+
+#### Quick Start
+
 ```bash
 # Clone the repository
-git clone https://github.com/oracle-quickstart/oci-cloudnative.git
+git clone https://github.com/rishikeshr/oci-cloudnative.git
 cd oci-cloudnative
 
-# Start all services
+# Start all services (builds images and starts containers)
 docker-compose up -d
+
+# Wait for services to be ready (may take 2-3 minutes)
+docker-compose ps
 
 # Access the application
 open http://localhost:8086
 ```
 
-**📖 See [DOCKER-COMPOSE-README.md](./DOCKER-COMPOSE-README.md) for complete local development guide**
+#### What Gets Deployed
+
+The Docker Compose setup includes:
+
+**Application Microservices:**
+- **Storefront** (http://localhost:8086) - React-based web UI
+- **API Gateway** (http://localhost:8080) - NGINX reverse proxy
+- **User Service** (http://localhost:3000) - User authentication & management
+- **Catalogue Service** (http://localhost:8081) - Product catalog
+- **Carts Service** (http://localhost:8082) - Shopping cart management
+- **Orders Service** (http://localhost:8083) - Order processing
+- **Payment Service** (http://localhost:8084) - Payment processing
+- **Fulfillment Service** (http://localhost:8085) - Order fulfillment
+- **Assets Service** (http://localhost:3001) - Product images & static assets
+- **Events Service** (http://localhost:8087) - Event streaming integration
+- **Newsletter Service** (http://localhost:3002) - Newsletter subscriptions
+
+**Infrastructure Services:**
+- **PostgreSQL** (ports 5432-5435) - 4 database instances for different services
+- **MinIO** (http://localhost:9000, Console: http://localhost:9001) - S3-compatible object storage
+- **Apache Kafka** (localhost:9092) - Event streaming
+- **Zookeeper** (localhost:2181) - Kafka coordination
+- **NATS** (localhost:4222) - Messaging for orders/fulfillment
+- **Mailhog** (UI: http://localhost:8025, SMTP: 1025) - Email testing
+
+#### Verify Deployment
+
+```bash
+# Check all services are running
+docker-compose ps
+
+# View logs for all services
+docker-compose logs -f
+
+# View logs for a specific service
+docker-compose logs -f storefront
+
+# Check service health
+curl http://localhost:8086  # Storefront
+curl http://localhost:3000/health  # User service
+curl http://localhost:3002/health  # Newsletter service
+```
+
+#### Using the Application
+
+1. **Browse Products**: Navigate to http://localhost:8086
+2. **Create Account**: Click "Sign In" → "Register" to create a user
+3. **Add to Cart**: Browse products and add items to your cart
+4. **Checkout**: Complete the purchase flow
+5. **Subscribe to Newsletter**: Enter email in the newsletter form
+6. **View Emails**: Check http://localhost:8025 (Mailhog) to see subscription emails
+
+#### Accessing Infrastructure Components
+
+**PostgreSQL Databases:**
+```bash
+# User database
+psql -h localhost -p 5432 -U mushop -d mushop_user
+
+# Catalogue database
+psql -h localhost -p 5433 -U mushop -d mushop_catalogue
+
+# Carts database
+psql -h localhost -p 5434 -U mushop -d mushop_carts
+
+# Orders database
+psql -h localhost -p 5435 -U mushop -d mushop_orders
+
+# Password for all: mushop
+```
+
+**MinIO Object Storage:**
+```bash
+# Access MinIO Console
+open http://localhost:9001
+
+# Credentials:
+# Username: minioadmin
+# Password: minioadmin
+```
+
+**Mailhog (Email Testing):**
+```bash
+# View sent emails
+open http://localhost:8025
+```
+
+**Kafka Topics:**
+```bash
+# List topics
+docker-compose exec kafka kafka-topics \
+  --bootstrap-server localhost:9092 --list
+
+# Consume events
+docker-compose exec kafka kafka-console-consumer \
+  --bootstrap-server localhost:9092 \
+  --topic mushop-events --from-beginning
+```
+
+#### Managing the Deployment
+
+```bash
+# Stop all services (keeps data)
+docker-compose stop
+
+# Start services again
+docker-compose start
+
+# Restart a specific service
+docker-compose restart storefront
+
+# View resource usage
+docker stats
+
+# Rebuild a service after code changes
+docker-compose build user
+docker-compose up -d user
+
+# Scale a service (e.g., run 3 catalogue instances)
+docker-compose up -d --scale catalogue=3
+```
+
+#### Cleanup
+
+```bash
+# Stop and remove all containers
+docker-compose down
+
+# Remove containers, networks, and volumes (complete cleanup)
+docker-compose down -v
+
+# Remove all images as well
+docker-compose down -v --rmi all
+```
+
+#### Troubleshooting
+
+**Services not starting:**
+```bash
+# Check logs for errors
+docker-compose logs
+
+# Restart all services
+docker-compose restart
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+**Database connection errors:**
+```bash
+# Check PostgreSQL is ready
+docker-compose exec postgres-user pg_isready -U mushop
+
+# Restart database and dependent service
+docker-compose restart postgres-user user
+```
+
+**Port conflicts:**
+```bash
+# If ports are already in use, modify docker-compose.yml
+# Change the first port number (host port) to something else
+# Example: "8086:80" → "8090:80"
+```
+
+**Out of memory:**
+```bash
+# Increase Docker memory allocation in Docker Desktop preferences
+# Recommended: At least 8GB RAM
+```
+
+**📖 See [DOCKER-COMPOSE-README.md](./DOCKER-COMPOSE-README.md) for complete local development guide and advanced topics**
 
 ### Deploy to Kubernetes
 
