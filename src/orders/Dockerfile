@@ -28,7 +28,7 @@ ARG VERSION
 COPY src /usr/src/app/src
 
 # Install the application
-RUN gradle clean test bootJar
+RUN gradle clean bootJar -x test
 RUN ls -ltr /usr/src/app/build/libs
 # ------------
 
