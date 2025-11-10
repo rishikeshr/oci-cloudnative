@@ -2,7 +2,7 @@
 
 ## Build and Push Docker Images
 
-This workflow automatically builds and pushes all MuShop microservice Docker images to GitHub Container Registry (ghcr.io).
+This workflow automatically builds and pushes all MuShop microservice Docker images to Docker Hub (hub.docker.com).
 
 ### Triggers
 
@@ -19,17 +19,17 @@ The workflow builds and pushes the following images:
 
 | Service | Image Name | Description |
 |---------|------------|-------------|
-| User | `ghcr.io/<owner>/mushop-user` | User authentication & management |
-| Catalogue | `ghcr.io/<owner>/mushop-catalogue` | Product catalog |
-| Carts | `ghcr.io/<owner>/mushop-carts` | Shopping cart management |
-| Orders | `ghcr.io/<owner>/mushop-orders` | Order processing |
-| Payment | `ghcr.io/<owner>/mushop-payment` | Payment processing |
-| Fulfillment | `ghcr.io/<owner>/mushop-fulfillment` | Order fulfillment |
-| Events | `ghcr.io/<owner>/mushop-events` | Event streaming |
-| Assets | `ghcr.io/<owner>/mushop-assets` | Static assets & images |
-| Newsletter | `ghcr.io/<owner>/mushop-newsletter` | Newsletter subscriptions |
-| API | `ghcr.io/<owner>/mushop-api` | Backend for Frontend (BFF) |
-| Storefront | `ghcr.io/<owner>/mushop-storefront` | React frontend |
+| User | `rishikeshr/mushop-user` | User authentication & management |
+| Catalogue | `rishikeshr/mushop-catalogue` | Product catalog |
+| Carts | `rishikeshr/mushop-carts` | Shopping cart management |
+| Orders | `rishikeshr/mushop-orders` | Order processing |
+| Payment | `rishikeshr/mushop-payment` | Payment processing |
+| Fulfillment | `rishikeshr/mushop-fulfillment` | Order fulfillment |
+| Events | `rishikeshr/mushop-events` | Event streaming |
+| Assets | `rishikeshr/mushop-assets` | Static assets & images |
+| Newsletter | `rishikeshr/mushop-newsletter` | Newsletter subscriptions |
+| API | `rishikeshr/mushop-api` | Backend for Frontend (BFF) |
+| Storefront | `rishikeshr/mushop-storefront` | React frontend |
 
 ### Image Tags
 
@@ -54,18 +54,45 @@ The workflow uses GitHub Actions cache to speed up builds:
 - Docker layer cache is automatically managed
 - Subsequent builds are significantly faster
 
+### Secrets Required
+
+The workflow requires the following secrets to be configured in your GitHub repository:
+- `DOCKER_USERNAME` - Your Docker Hub username (rishikeshr)
+- `DOCKER_TOKEN` - Your Docker Hub access token or password
+
+**To configure secrets:**
+1. Go to your GitHub repository
+2. Navigate to Settings → Secrets and variables → Actions
+3. Click "New repository secret"
+4. Add `DOCKER_USERNAME` with value: `rishikeshr`
+5. Add `DOCKER_TOKEN` with your Docker Hub access token
+
+**To create a Docker Hub access token:**
+1. Log in to https://hub.docker.com
+2. Go to Account Settings → Security
+3. Click "New Access Token"
+4. Give it a description (e.g., "GitHub Actions")
+5. Copy the token and add it to GitHub secrets
+
 ### Permissions Required
 
 The workflow requires:
 - `contents: read` - To checkout the repository
-- `packages: write` - To push images to GitHub Container Registry
+- `packages: write` - For workflow attestation (optional)
 
 ### Using the Images
 
 After the workflow runs, images are available at:
 
 ```bash
-docker pull ghcr.io/<owner>/mushop-<service>:latest
+docker pull rishikeshr/mushop-<service>:latest
+```
+
+For example:
+```bash
+docker pull rishikeshr/mushop-user:latest
+docker pull rishikeshr/mushop-catalogue:latest
+docker pull rishikeshr/mushop-storefront:latest
 ```
 
 ### Local Testing
@@ -82,16 +109,26 @@ act push -s GITHUB_TOKEN=<your-token>
 
 ### Deployment with Docker Compose
 
-To use the pre-built images from GitHub Container Registry, update your `docker-compose.yml`:
+To use the pre-built images from Docker Hub, update your `docker-compose.yml`:
 
 ```yaml
 services:
   user:
-    image: ghcr.io/<owner>/mushop-user:latest
+    image: rishikeshr/mushop-user:latest
     # Remove the 'build' section
     environment:
       - POSTGRES_HOST=postgres-user
       # ... other env vars
+
+  catalogue:
+    image: rishikeshr/mushop-catalogue:latest
+    environment:
+      - POSTGRES_HOST=postgres-catalogue
+      # ... other env vars
+
+  storefront:
+    image: rishikeshr/mushop-storefront:latest
+    # ... other env vars
 ```
 
 ### Deployment with Helm
@@ -101,7 +138,17 @@ Update Helm values to use the images:
 ```yaml
 user:
   image:
-    repository: ghcr.io/<owner>/mushop-user
+    repository: rishikeshr/mushop-user
+    tag: latest
+
+catalogue:
+  image:
+    repository: rishikeshr/mushop-catalogue
+    tag: latest
+
+storefront:
+  image:
+    repository: rishikeshr/mushop-storefront
     tag: latest
 ```
 
@@ -118,8 +165,9 @@ You can manually trigger the workflow:
 ### Troubleshooting
 
 **Authentication Issues:**
-- Ensure `packages: write` permission is granted
-- Check that GITHUB_TOKEN is available (automatic in GitHub Actions)
+- Verify `DOCKER_USERNAME` and `DOCKER_TOKEN` secrets are configured
+- Check that the Docker Hub access token has write permissions
+- Ensure the token hasn't expired
 
 **Build Failures:**
 - Check the specific service logs in the workflow run
@@ -140,7 +188,7 @@ To add vulnerability scanning, add this step before pushing:
 - name: Scan image for vulnerabilities
   uses: aquasecurity/trivy-action@master
   with:
-    image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}:latest
+    image-ref: rishikeshr/mushop-${{ matrix.service.name }}:latest
     format: 'sarif'
     output: 'trivy-results.sarif'
 ```
@@ -156,7 +204,7 @@ To sign images with Cosign:
   env:
     COSIGN_EXPERIMENTAL: "true"
   run: |
-    cosign sign ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}@${{ steps.build.outputs.digest }}
+    cosign sign rishikeshr/mushop-${{ matrix.service.name }}@${{ steps.build.outputs.digest }}
 ```
 
 ### Cost Optimization
@@ -167,12 +215,16 @@ To sign images with Cosign:
 - Multi-stage builds minimize image size
 
 **Storage Optimization:**
-- GitHub Container Registry is free for public repositories
-- Private repositories have storage limits (see GitHub pricing)
-- Old images can be cleaned up manually or with retention policies
+- Docker Hub free tier includes unlimited public repositories
+- Free tier has pull rate limits (100 pulls per 6 hours for anonymous users)
+- Authenticated users get 200 pulls per 6 hours
+- Old images can be cleaned up manually from Docker Hub UI
+- Consider Docker Hub Pro ($5/month) for unlimited pulls and private repositories
 
 ### Related Documentation
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+- [Docker Hub](https://hub.docker.com)
+- [Docker Hub Repositories](https://hub.docker.com/repositories/rishikeshr)
 - [Docker Build Push Action](https://github.com/docker/build-push-action)
+- [Docker Login Action](https://github.com/docker/login-action)
