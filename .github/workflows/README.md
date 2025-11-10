@@ -42,9 +42,11 @@ Images are automatically tagged based on the trigger:
 
 ### Multi-Architecture Support
 
-Images are built for:
+Most images are built for:
 - `linux/amd64` (x86_64)
 - `linux/arm64` (ARM 64-bit, including Apple Silicon)
+
+**Note:** The fulfillment service is only built for `linux/amd64` due to GraalVM native image compilation limitations with QEMU emulation during cross-platform builds.
 
 ### Build Cache
 
