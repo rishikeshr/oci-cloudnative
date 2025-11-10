@@ -6,7 +6,7 @@ const path = require('path');
 const child = require('child_process');
 const { createConnection } = require('typeorm');
 
-const SCHEMA_FILE = 'atp.init.sh';
+const SCHEMA_FILE = 'postgres.init.sh';
 
 /**
  * load a file by executing script with environment variable interpolation

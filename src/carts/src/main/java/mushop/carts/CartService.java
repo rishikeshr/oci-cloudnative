@@ -47,8 +47,8 @@ public class CartService implements Service {
     public CartService(Config config) {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         Boolean connected = false;
-        String dbName = config.get("OADB_SERVICE").asString().get();
-        if (MOCKDB.equalsIgnoreCase(dbName)) {
+        String dbHost = config.get("POSTGRES_HOST").asString().orElse("localhost");
+        if (MOCKDB.equalsIgnoreCase(dbHost)) {
             log.warning("Connecting to a Mock Database. Data is not persisted.");
             carts = new CartRepositoryMemoryImpl();
         } else {
@@ -56,11 +56,11 @@ public class CartService implements Service {
                 try {
                     Future<Boolean> result = executorService.submit(() -> {
                         try {
-                            log.info("Connecting to " + dbName);
+                            log.info("Connecting to PostgreSQL at " + dbHost);
                             Timer.Context context = dbConnectTimer.time();
-                            carts = new CartRepositoryDatabaseImpl(config);
+                            carts = new CartRepositoryPostgresImpl(config);
                             context.close();
-                            log.info("Connected to " + dbName);
+                            log.info("Connected to PostgreSQL at " + dbHost);
                             return Boolean.TRUE;
                         } catch (Exception ex) {
                             log.warning("Connect failed. Retrying.");

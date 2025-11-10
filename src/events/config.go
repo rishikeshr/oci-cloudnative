@@ -6,39 +6,35 @@ package events
 
 import (
 	"os"
+	"strings"
 
-	"github.com/oracle/oci-go-sdk/common"
-	"github.com/oracle/oci-go-sdk/streaming"
+	"github.com/Shopify/sarama"
 )
 
-// EnvironmentConfigurationProvider uses environment variables to get OCI config
-func EnvironmentConfigurationProvider() (common.ConfigurationProvider, error) {
-	pass := os.Getenv("PASSPHRASE")
-	provider := common.NewRawConfigurationProvider(
-		os.Getenv("TENANCY"),
-		os.Getenv("USER_ID"),
-		os.Getenv("REGION"),
-		os.Getenv("FINGERPRINT"),
-		os.Getenv("PRIVATE_KEY"),
-		&pass,
-	)
-	_, err := common.IsConfigurationProviderValid(provider)
-
-	return provider, err
+// GetKafkaConfig returns a Kafka configuration from environment variables
+func GetKafkaConfig() *sarama.Config {
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Producer.RequiredAcks = sarama.WaitForLocal
+	config.Producer.Compression = sarama.CompressionSnappy
+	config.Producer.Retry.Max = 3
+	return config
 }
 
-// GetStreamClient returns a streaming client with the given configuration provider
-func GetStreamClient(provider common.ConfigurationProvider) (streaming.StreamClient, error) {
-	var endpoint string
-	endpoint = os.Getenv("MESSAGES_ENDPOINT")
-	if endpoint == "" {
-		region, _ := provider.Region()
-		endpoint = "https://streaming." + region + ".oci.oraclecloud.com"
+// GetKafkaBrokers returns the list of Kafka brokers from environment
+func GetKafkaBrokers() []string {
+	brokers := os.Getenv("KAFKA_BROKERS")
+	if brokers == "" {
+		brokers = "localhost:9092"
 	}
-	return streaming.NewStreamClientWithConfigurationProvider(provider, endpoint)
+	return strings.Split(brokers, ",")
 }
 
-// GetStreamID returns the events streamId
-func GetStreamID() (streamId string) {
-	return os.Getenv("STREAM_ID")
+// GetKafkaTopic returns the Kafka topic name from environment
+func GetKafkaTopic() string {
+	topic := os.Getenv("KAFKA_TOPIC")
+	if topic == "" {
+		topic = "mushop-events"
+	}
+	return topic
 }

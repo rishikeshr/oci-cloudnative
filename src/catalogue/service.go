@@ -61,7 +61,7 @@ var ErrNotFound = errors.New("not found")
 // ErrDBConnection is returned when connection with the database fails.
 var ErrDBConnection = errors.New("database connection error")
 
-var baseQuery = "SELECT products.sku AS id, products.brand, products.title, products.description, products.weight, products.product_size, products.colors, products.qty, products.price, products.image_url_1, products.image_url_2, categories_name FROM products LEFT JOIN (SELECT product_category.sku , LISTAGG(categories.name, ', ' ON OVERFLOW TRUNCATE '...' WITHOUT COUNT) WITHIN GROUP (ORDER BY sku) AS categories_name FROM product_category LEFT OUTER JOIN categories ON product_category.category_id=categories.category_id GROUP BY product_category.sku) categoriesbundle ON products.sku=categoriesbundle.sku"
+var baseQuery = "SELECT products.sku AS id, products.brand, products.title, products.description, products.weight, products.product_size, products.colors, products.qty, products.price, products.image_url_1, products.image_url_2, categories_name FROM products LEFT JOIN (SELECT product_category.sku , STRING_AGG(categories.name, ', ' ORDER BY product_category.sku) AS categories_name FROM product_category LEFT OUTER JOIN categories ON product_category.category_id=categories.category_id GROUP BY product_category.sku) categoriesbundle ON products.sku=categoriesbundle.sku"
 
 // NewCatalogueService returns an implementation of the Service interface,
 // with connection to an SQL database.
@@ -178,7 +178,7 @@ func (s *catalogueService) Health() []Health {
 	}
 
 	app := Health{"catalogue", "OK", time.Now().String()}
-	db := Health{"atp:catalogue-data", dbstatus, time.Now().String()}
+	db := Health{"postgres:catalogue-data", dbstatus, time.Now().String()}
 
 	health = append(health, app)
 	health = append(health, db)

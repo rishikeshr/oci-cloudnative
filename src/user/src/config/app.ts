@@ -1,12 +1,14 @@
 
 export interface IAppEnv {
-  OADB_SERVICE: string;
-  OADB_USER: string;
-  OADB_PW: string;
+  POSTGRES_HOST: string;
+  POSTGRES_PORT: string;
+  POSTGRES_DB: string;
+  POSTGRES_USER: string;
+  POSTGRES_PASSWORD: string;
   NODE_ENV?: string;
 }
 
-export type IDBConfig = Pick<IAppEnv, 'OADB_SERVICE' | 'OADB_USER' | 'OADB_PW'>;
+export type IDBConfig = Pick<IAppEnv, 'POSTGRES_HOST' | 'POSTGRES_PORT' | 'POSTGRES_DB' | 'POSTGRES_USER' | 'POSTGRES_PASSWORD'>;
 
 export class AppConfig {
   private static COMMON: AppConfig = new AppConfig();
@@ -32,11 +34,13 @@ export class AppConfig {
    * get db configuration
    */
   public dbConfig(): IDBConfig {
-    const { OADB_SERVICE, OADB_USER, OADB_PW } = this.ENV;
+    const { POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD } = this.ENV;
     return {
-      OADB_SERVICE,
-      OADB_USER,
-      OADB_PW,
+      POSTGRES_HOST,
+      POSTGRES_PORT,
+      POSTGRES_DB,
+      POSTGRES_USER,
+      POSTGRES_PASSWORD,
     };
   }
 
@@ -45,7 +49,7 @@ export class AppConfig {
    */
   public mockDb(): boolean {
     // tslint:disable-next-line:triple-equals
-    return this.dbConfig().OADB_SERVICE == 'mock';
+    return this.dbConfig().POSTGRES_HOST == 'mock';
   }
 
 }

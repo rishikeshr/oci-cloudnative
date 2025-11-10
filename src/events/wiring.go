@@ -5,16 +5,16 @@
 package events
 
 import (
+	"log"
 	"net/http"
 	"os"
 
-	"github.com/go-kit/kit/log"
+	"github.com/Shopify/sarama"
+	kitlog "github.com/go-kit/kit/log"
 	"golang.org/x/net/context"
 
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/oracle/oci-go-sdk/common"
 )
 
 var (
@@ -33,24 +33,32 @@ func init() {
 func WireUp(
 	ctx context.Context,
 	tracer stdopentracing.Tracer,
-	provider common.ConfigurationProvider,
-	serviceName string) (http.Handler, log.Logger) {
+	serviceName string) (http.Handler, kitlog.Logger) {
 	// Logging
-	var logger log.Logger
+	var logger kitlog.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stderr)
-		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-		logger = log.With(logger, "caller", log.DefaultCaller)
+		logger = kitlog.NewLogfmtLogger(os.Stderr)
+		logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC)
+		logger = kitlog.With(logger, "caller", kitlog.DefaultCaller)
 	}
 
-	// Streaming configurations
-	client, _ := GetStreamClient(provider)
-	streamID := GetStreamID()
+	// Kafka configurations
+	config := GetKafkaConfig()
+	brokers := GetKafkaBrokers()
+	topic := GetKafkaTopic()
+
+	// Create Kafka producer
+	producer, err := sarama.NewSyncProducer(brokers, config)
+	if err != nil {
+		log.Fatalf("Failed to create Kafka producer: %v", err)
+	}
+
+	logger.Log("msg", "Connected to Kafka", "brokers", brokers, "topic", topic)
 
 	// Service domain
 	var service Service
 	{
-		service = NewEventsService(ctx, client, streamID, logger)
+		service = NewEventsService(ctx, producer, topic, logger)
 		service = LoggingMiddleware(logger)(service)
 	}
 

@@ -1,9 +1,13 @@
 
-# The name of the JSON document collection to store the carts in. 
-OADB_CARTS_COLLECTION: cart
+# PostgreSQL connection settings
+POSTGRES_HOST: localhost
+POSTGRES_PORT: 5432
+POSTGRES_DB: mushop_carts
+POSTGRES_USER: mushop
+POSTGRES_PASSWORD: mushop
 
-# The autonomous database service name (or "Mock" for in-memory without a database)
-OADB_SERVICE: mock
+# The name of the table to store the carts in
+POSTGRES_CARTS_TABLE: carts
 
 server:
   port: 80
