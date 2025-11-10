@@ -1,0 +1,334 @@
+version: '3.8'
+
+# MuShop Local Development Environment
+# All services and infrastructure without Oracle/OCI dependencies
+
+services:
+  # ============================================================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================================================
+
+  # PostgreSQL - User Service Database
+  postgres-user:
+    image: postgres:14-alpine
+    container_name: mushop-postgres-user
+    environment:
+      POSTGRES_DB: mushop_user
+      POSTGRES_USER: mushop
+      POSTGRES_PASSWORD: mushop
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - mushop
+
+  # PostgreSQL - Catalogue Service Database
+  postgres-catalogue:
+    image: postgres:14-alpine
+    container_name: mushop-postgres-catalogue
+    environment:
+      POSTGRES_DB: mushop_catalogue
+      POSTGRES_USER: mushop
+      POSTGRES_PASSWORD: mushop
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_catalogue_data:/var/lib/postgresql/data
+    networks:
+      - mushop
+
+  # PostgreSQL - Carts Service Database
+  postgres-carts:
+    image: postgres:14-alpine
+    container_name: mushop-postgres-carts
+    environment:
+      POSTGRES_DB: mushop_carts
+      POSTGRES_USER: mushop
+      POSTGRES_PASSWORD: mushop
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_carts_data:/var/lib/postgresql/data
+    networks:
+      - mushop
+
+  # PostgreSQL - Orders Service Database
+  postgres-orders:
+    image: postgres:14-alpine
+    container_name: mushop-postgres-orders
+    environment:
+      POSTGRES_DB: mushop_orders
+      POSTGRES_USER: mushop
+      POSTGRES_PASSWORD: mushop
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_orders_data:/var/lib/postgresql/data
+    networks:
+      - mushop
+
+  # MinIO - Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: mushop-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - mushop
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Zookeeper - Required for Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: mushop-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - mushop
+
+  # Kafka - Event Streaming
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: mushop-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+    networks:
+      - mushop
+
+  # NATS - Messaging for Orders/Fulfillment
+  nats:
+    image: nats:2.9-alpine
+    container_name: mushop-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    networks:
+      - mushop
+
+  # Mailhog - SMTP Server for Development
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mushop-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - mushop
+
+  # ============================================================================
+  # APPLICATION SERVICES
+  # ============================================================================
+
+  # User Service
+  user:
+    build:
+      context: ./src/user
+      dockerfile: Dockerfile
+    container_name: mushop-user
+    depends_on:
+      - postgres-user
+    environment:
+      - POSTGRES_HOST=postgres-user
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mushop_user
+      - POSTGRES_USER=mushop
+      - POSTGRES_PASSWORD=mushop
+    ports:
+      - "3001:3000"
+    networks:
+      - mushop
+
+  # Catalogue Service
+  catalogue:
+    build:
+      context: ./src/catalogue
+      dockerfile: Dockerfile
+    container_name: mushop-catalogue
+    depends_on:
+      - postgres-catalogue
+    environment:
+      - POSTGRES_HOST=postgres-catalogue
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mushop_catalogue
+      - POSTGRES_USER=mushop
+      - POSTGRES_PASSWORD=mushop
+    ports:
+      - "8080:8080"
+    networks:
+      - mushop
+
+  # Carts Service
+  carts:
+    build:
+      context: ./src/carts
+      dockerfile: Dockerfile
+    container_name: mushop-carts
+    depends_on:
+      - postgres-carts
+    environment:
+      - POSTGRES_HOST=postgres-carts
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mushop_carts
+      - POSTGRES_USER=mushop
+      - POSTGRES_PASSWORD=mushop
+      - POSTGRES_CARTS_TABLE=carts
+    ports:
+      - "8081:80"
+    networks:
+      - mushop
+
+  # Orders Service
+  orders:
+    build:
+      context: ./src/orders
+      dockerfile: Dockerfile
+    container_name: mushop-orders
+    depends_on:
+      - postgres-orders
+      - nats
+    environment:
+      - POSTGRES_HOST=postgres-orders
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mushop_orders
+      - POSTGRES_USER=mushop
+      - POSTGRES_PASSWORD=mushop
+      - NATS_HOST=nats
+      - NATS_PORT=4222
+    ports:
+      - "8082:8082"
+    networks:
+      - mushop
+
+  # Payment Service (Stateless)
+  payment:
+    build:
+      context: ./src/payment
+      dockerfile: Dockerfile
+    container_name: mushop-payment
+    ports:
+      - "8083:8080"
+    networks:
+      - mushop
+
+  # Fulfillment Service
+  fulfillment:
+    build:
+      context: ./src/fulfillment
+      dockerfile: Dockerfile
+    container_name: mushop-fulfillment
+    depends_on:
+      - nats
+    environment:
+      - NATS_HOST=nats
+      - NATS_PORT=4222
+    networks:
+      - mushop
+
+  # Events Service
+  events:
+    build:
+      context: ./src/events
+      dockerfile: Dockerfile
+    container_name: mushop-events
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_TOPIC=mushop-events
+    ports:
+      - "8084:8080"
+    networks:
+      - mushop
+
+  # Assets Service
+  assets:
+    build:
+      context: ./src/assets
+      dockerfile: Dockerfile
+    container_name: mushop-assets
+    depends_on:
+      - minio
+    environment:
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=mushop-assets
+      - MINIO_USE_SSL=false
+    ports:
+      - "8085:3000"
+    networks:
+      - mushop
+
+  # API Service (BFF - Backend for Frontend)
+  api:
+    build:
+      context: ./src/api
+      dockerfile: Dockerfile
+    container_name: mushop-api
+    depends_on:
+      - user
+      - catalogue
+      - carts
+      - orders
+    environment:
+      - USER_SERVICE_URL=http://user:3000
+      - CATALOGUE_SERVICE_URL=http://catalogue:8080
+      - CARTS_SERVICE_URL=http://carts:80
+      - ORDERS_SERVICE_URL=http://orders:8082
+    ports:
+      - "3000:3000"
+    networks:
+      - mushop
+
+  # Storefront (Frontend)
+  storefront:
+    build:
+      context: ./src/storefront
+      dockerfile: Dockerfile
+    container_name: mushop-storefront
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:3000
+    ports:
+      - "8086:8080"
+    networks:
+      - mushop
+
+networks:
+  mushop:
+    driver: bridge
+
+volumes:
+  postgres_user_data:
+  postgres_catalogue_data:
+  postgres_carts_data:
+  postgres_orders_data:
+  minio_data:

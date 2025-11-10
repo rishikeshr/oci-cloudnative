@@ -9,10 +9,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/go-kit/kit/log"
 	"golang.org/x/net/context"
-
-	"github.com/oracle/oci-go-sdk/streaming"
 )
 
 // Middleware decorates a service.
@@ -49,22 +48,22 @@ type Health struct {
 // NewEventsService returns a simple implementation of the Service interface
 func NewEventsService(
 	ctx context.Context,
-	client streaming.StreamClient,
-	streamID string,
+	producer sarama.SyncProducer,
+	topic string,
 	logger log.Logger) Service {
 
 	return &service{
 		ctx:      ctx,
-		client:   client,
-		streamID: streamID,
+		producer: producer,
+		topic:    topic,
 		logger:   logger,
 	}
 }
 
 type service struct {
 	ctx      context.Context
-	client   streaming.StreamClient
-	streamID string
+	producer sarama.SyncProducer
+	topic    string
 	logger   log.Logger
 }
 
@@ -88,8 +87,8 @@ func (s *service) PostEvents(source string, track string, events []Event) (Event
 		}, err
 	}
 
-	// construct messages
-	var messages []streaming.PutMessagesDetailsEntry
+	// Send messages to Kafka
+	var messages []*sarama.ProducerMessage
 
 	for _, evt := range events {
 		msg := EventRecord{
@@ -102,25 +101,33 @@ func (s *service) PostEvents(source string, track string, events []Event) (Event
 
 		data, e := json.Marshal(msg)
 		if e == nil {
-			// append value
-			messages = append(messages, streaming.PutMessagesDetailsEntry{
-				Key:   nil,
-				Value: data,
+			// Create Kafka message
+			messages = append(messages, &sarama.ProducerMessage{
+				Topic: s.topic,
+				Value: sarama.ByteEncoder(data),
 			})
 		}
 	}
 
-	// construct request
-	messagesRequest := streaming.PutMessagesRequest{
-		StreamId: &s.streamID,
-		PutMessagesDetails: streaming.PutMessagesDetails{
-			Messages: messages,
-		},
+	// Send all messages
+	successCount := 0
+	for _, msg := range messages {
+		_, _, err = s.producer.SendMessage(msg)
+		if err != nil {
+			s.logger.Log("error", "failed to send message", "err", err)
+		} else {
+			successCount++
+		}
 	}
-	// make request
-	_, err = s.client.PutMessages(s.ctx, messagesRequest)
-	if err == nil {
+
+	if successCount == len(messages) {
 		success = true
+		err = nil
+	} else if successCount > 0 {
+		success = true
+		err = errors.New("some messages failed to send")
+	} else {
+		err = errors.New("all messages failed to send")
 	}
 
 	return EventsReceived{
@@ -132,6 +139,15 @@ func (s *service) PostEvents(source string, track string, events []Event) (Event
 func (s *service) Health() []Health {
 	var health []Health
 	app := Health{"events", "OK", time.Now().String()}
+
+	// Check Kafka connection
+	kafkaStatus := "OK"
+	if s.producer == nil {
+		kafkaStatus = "ERROR"
+	}
+	kafka := Health{"kafka:events-stream", kafkaStatus, time.Now().String()}
+
 	health = append(health, app)
+	health = append(health, kafka)
 	return health
 }

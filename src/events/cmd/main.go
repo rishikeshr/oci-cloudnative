@@ -79,13 +79,8 @@ func main() {
 	errc := make(chan error)
 	ctx := context.Background()
 
-	// connect oci service
-	provider, err := events.EnvironmentConfigurationProvider()
-	handler, logger := events.WireUp(ctx, tracer, provider, ServiceName)
-	if err != nil {
-		logger.Log("error", err)
-		logger.Log("warning", "Running without stream configuration")
-	}
+	// Wire up the service with Kafka
+	handler, logger := events.WireUp(ctx, tracer, ServiceName)
 
 	// Create and launch the HTTP server.
 	go func() {
