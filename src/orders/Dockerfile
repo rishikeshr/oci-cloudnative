@@ -4,7 +4,7 @@ ARG VERSION="0.0.1-SNAPSHOT"
 
 # ------------
 # Stage 1 : Setup the build environment
-FROM gradle:6.5 as buildenv
+FROM gradle:7.6-jdk17 as buildenv
 
 # create source folder
 RUN mkdir -p /usr/src/app
