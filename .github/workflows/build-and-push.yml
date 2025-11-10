@@ -31,36 +31,47 @@ jobs:
           - name: user
             context: ./src/user
             dockerfile: ./src/user/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: catalogue
             context: ./src/catalogue
             dockerfile: ./src/catalogue/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: carts
             context: ./src/carts
             dockerfile: ./src/carts/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: orders
             context: ./src/orders
             dockerfile: ./src/orders/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: payment
             context: ./src/payment
             dockerfile: ./src/payment/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: fulfillment
             context: ./src/fulfillment
             dockerfile: ./src/fulfillment/Dockerfile
+            platforms: linux/amd64
           - name: events
             context: ./src/events
             dockerfile: ./src/events/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: assets
             context: ./src/assets
             dockerfile: ./src/assets/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: newsletter
             context: ./src/newsletter
             dockerfile: ./src/newsletter/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: api
             context: ./src/api
             dockerfile: ./src/api/Dockerfile
+            platforms: linux/amd64,linux/arm64
           - name: storefront
             context: ./src/storefront
             dockerfile: ./src/storefront/Dockerfile
+            platforms: linux/amd64,linux/arm64
 
     steps:
       - name: Checkout code
@@ -101,7 +112,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.service.platforms }}
 
       - name: Image digest
         run: echo "Image pushed with digest ${{ steps.meta.outputs.digest }}"
