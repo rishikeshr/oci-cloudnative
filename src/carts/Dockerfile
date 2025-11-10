@@ -19,7 +19,7 @@ RUN mvn package
 # ------------
 # Stage 2 : Application container
 #
-FROM openjdk:11-jre-slim
+FROM eclipse-temurin:11-jre-jammy
 ARG APPLICATION_NAME
 ARG VERSION
 
