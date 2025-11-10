@@ -35,11 +35,11 @@ RUN ls -ltr /usr/src/app/build/libs
 # ------------
 # Stage 3 : Application container
 #
-FROM openjdk:13-slim
+FROM eclipse-temurin:17-jre-jammy
 ARG APPLICATION_NAME
 ARG VERSION
 
-RUN apt-get update && apt-get install -y procps
+RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
 
 # copy the generated application distribution
 COPY --from=appbuild /usr/src/app/build/libs/${APPLICATION_NAME}-${VERSION}.jar /app/${APPLICATION_NAME}-${VERSION}.jar

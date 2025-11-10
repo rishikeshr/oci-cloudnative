@@ -22,15 +22,15 @@ COPY src /usr/src/app/src
 RUN gradle clean assemble
 
 # Stage 3 : Build a native image using GraalVM
-FROM oracle/graalvm-ce:20.1.0-java11 as graalvm
+FROM ghcr.io/graalvm/graalvm-ce:ol8-java11-22.3.0 as graalvm
 COPY --from=appbuild /usr/src/app/build /home/app/fulfillment
 WORKDIR /home/app/fulfillment/
 RUN gu install native-image
 RUN native-image --no-server  -cp libs/fulfillment-*-all.jar
 
 # Step 4 : Build the final application image
-FROM frolvlad/alpine-glibc
-RUN apk update && apk add libstdc++
+FROM frolvlad/alpine-glibc:latest
+RUN apk update && apk add libstdc++ && rm -rf /var/cache/apk/*
 EXPOSE 80
 COPY --from=graalvm /home/app/fulfillment/fulfillment /app/fulfillment
 ENTRYPOINT ["/app/fulfillment", "-Djava.library.path=/app"]
