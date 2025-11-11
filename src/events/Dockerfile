@@ -2,7 +2,7 @@
 # Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at http://oss.oracle.com/licenses/upl.
 #
-FROM golang:1.18-alpine AS go-builder
+FROM golang:1.20-alpine AS go-builder
 
 ARG TARGETARCH
 
