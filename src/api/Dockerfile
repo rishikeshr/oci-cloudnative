@@ -14,7 +14,7 @@ RUN npm config set loglevel warn \
 
 # Install application dependencies
 COPY package*.json /tmp/
-RUN cd /tmp && npm ci
+RUN cd /tmp && npm install
 RUN mkdir -p /usr/src/app && cp -a /tmp/node_modules /usr/src/app/
 RUN rm -rf /tmp/node_modules
 
