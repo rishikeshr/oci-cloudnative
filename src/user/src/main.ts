@@ -1,3 +1,5 @@
+// EDOT instrumentation must be imported first
+import './tracing';
 import './config/crud';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
