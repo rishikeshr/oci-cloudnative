@@ -1,5 +1,5 @@
 # OpenTelemetry Collector Configuration for MuShop
-# Receives telemetry from EDOT-instrumented services and exports to Jaeger
+# Sends telemetry from EDOT-instrumented services to Elasticsearch via Managed OpenTelemetry
 
 receivers:
   # OTLP receiver for traces, metrics, and logs
@@ -15,6 +15,7 @@ processors:
   batch:
     timeout: 10s
     send_batch_size: 1024
+    send_batch_max_size: 2048
 
   # Memory limiter prevents OOM
   memory_limiter:
@@ -33,32 +34,34 @@ processors:
         value: mushop
         action: upsert
       - key: deployment.environment
-        value: local-docker
+        value: ${DEPLOYMENT_ENVIRONMENT}
         action: upsert
 
 exporters:
-  # Export traces to Jaeger
+  # Primary: Export to Elasticsearch Managed OpenTelemetry (MOTLP)
+  otlphttp/elastic:
+    endpoint: ${ELASTIC_OTLP_ENDPOINT}
+    headers:
+      Authorization: "Bearer ${ELASTIC_OTLP_TOKEN}"
+    compression: gzip
+    timeout: 30s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  # Secondary: Export to local Jaeger (optional, for development)
   otlp/jaeger:
     endpoint: jaeger:4317
     tls:
       insecure: true
 
-  # Export metrics to Prometheus
-  prometheus:
-    endpoint: "0.0.0.0:8889"
-    namespace: mushop
-
   # Debug/logging exporter for troubleshooting
   logging:
-    verbosity: detailed
+    verbosity: normal
     sampling_initial: 5
     sampling_thereafter: 200
-
-  # Optional: Export to Elastic APM Server (if available)
-  # otlp/elastic:
-  #   endpoint: ${ELASTIC_APM_SERVER_URL}
-  #   headers:
-  #     Authorization: "Bearer ${ELASTIC_APM_SECRET_TOKEN}"
 
 extensions:
   # Health check endpoint
@@ -77,23 +80,24 @@ service:
   extensions: [health_check, pprof, zpages]
 
   pipelines:
-    # Traces pipeline
+    # Traces pipeline - send to Elasticsearch and optionally Jaeger
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, resourcedetection, batch]
-      exporters: [otlp/jaeger, logging]
+      exporters: [otlphttp/elastic, logging]
+      # For local development, add: otlp/jaeger
 
-    # Metrics pipeline
+    # Metrics pipeline - send to Elasticsearch
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, resource, resourcedetection, batch]
-      exporters: [prometheus, logging]
+      exporters: [otlphttp/elastic, logging]
 
-    # Logs pipeline
+    # Logs pipeline - send to Elasticsearch
     logs:
       receivers: [otlp]
       processors: [memory_limiter, resource, resourcedetection, batch]
-      exporters: [logging]
+      exporters: [otlphttp/elastic, logging]
 
   # Telemetry configuration for the collector itself
   telemetry:
@@ -101,3 +105,4 @@ service:
       level: info
     metrics:
       address: 0.0.0.0:8888
+      level: detailed

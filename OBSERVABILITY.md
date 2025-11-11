@@ -12,17 +12,26 @@ MuShop is instrumented with OpenTelemetry to provide comprehensive observability
 ## Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌──────────────┐
-│   Services  │────▶│   OTel      │────▶│   Jaeger     │
-│  (EDOT)     │     │  Collector  │     │  (Traces)    │
-└─────────────┘     └─────────────┘     └──────────────┘
-                          │
-                          ├──────────────▶ Prometheus
-                          │                (Metrics)
-                          │
-                          └──────────────▶ Logging
-                                          (Future: Elastic)
+┌─────────────────────┐     ┌─────────────────┐     ┌─────────────────────┐
+│   MuShop Services   │────▶│   OTel          │────▶│   Elasticsearch     │
+│   (EDOT Agents)     │     │   Collector     │     │   Managed OTLP      │
+│                     │     │                 │     │   (Cloud)           │
+│  • orders (Java)    │     │  Receives:      │     │                     │
+│  • carts (Java)     │     │   - Traces      │     │  • APM UI           │
+│  • fulfillment      │     │   - Metrics     │     │  • Logs Explorer    │
+│  • user (Node.js)   │     │   - Logs        │     │  • Service Map      │
+│  • api (Node.js)    │     │                 │     │  • Dashboards       │
+│  • assets           │     │  Processes:     │     │  • Alerts           │
+│  • newsletter       │     │   - Batching    │     │                     │
+│  • catalogue (Go)*  │     │   - Resources   │     │                     │
+│  • payment (Go)*    │     │   - Memory Mgmt │     │                     │
+│  • events (Go)*     │     │                 │     │                     │
+└─────────────────────┘     └─────────────────┘     └─────────────────────┘
+
+* Go services have OTel packages added, manual instrumentation pending
 ```
+
+All telemetry data (traces, metrics, logs) is sent to **Elasticsearch Managed OpenTelemetry (MOTLP)** via the OpenTelemetry Collector.
 
 ## Instrumented Services
 
@@ -81,37 +90,104 @@ OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production,service.version=<ver
 ### OpenTelemetry Collector
 
 The OTel Collector acts as a central telemetry hub:
-- **Receives**: OTLP over gRPC (4317) and HTTP (4318)
-- **Processes**: Batching, resource detection, memory limiting
-- **Exports**: Jaeger (traces), Prometheus (metrics), Logging
+- **Receives**: OTLP over gRPC (4317) and HTTP (4318) from instrumented services
+- **Processes**: Batching, resource detection, memory limiting, enrichment
+- **Exports**: All signals to **Elasticsearch Managed OpenTelemetry (MOTLP)**
 
 Configuration file: `otel-collector-config.yaml`
 
-## Usage
+### Elasticsearch Managed OpenTelemetry (MOTLP)
 
-### Starting the Services
+MuShop sends all telemetry to Elasticsearch Cloud via MOTLP:
 
-```bash
-# Start all services including observability stack
-docker-compose up -d
+**Endpoint Format**: `https://<deployment-id>.apm.<region>.cloud.es.io`
 
-# View logs
-docker-compose logs -f otel-collector
-```
+**Authentication**: Bearer token (API Key or Secret Token)
 
-### Accessing Observability Tools
+**Signals Exported**:
+- **Traces** → Elastic APM (distributed tracing)
+- **Metrics** → Elasticsearch (time-series metrics)
+- **Logs** → Elasticsearch (structured logging with trace correlation)
 
-#### Jaeger UI (Distributed Tracing)
-- URL: http://localhost:16686
-- View traces, service dependencies, latency analysis
-- Search by service, operation, tags, duration
+## Setup
 
-#### Prometheus Metrics
-- OTel Collector metrics: http://localhost:8888/metrics
-- Service metrics: http://localhost:8889/metrics
+### Prerequisites
 
-#### OTel Collector Health
+1. **Elasticsearch Cloud Deployment**:
+   - Sign up at https://cloud.elastic.co
+   - Create a new deployment
+   - Note your deployment ID and region
+
+2. **API Key or Secret Token**:
+   - In Kibana: Stack Management → API Keys → Create API Key
+   - Or use APM Server secret token from deployment settings
+
+### Configuration
+
+1. **Copy the environment template**:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edit `.env` with your Elasticsearch credentials**:
+   ```bash
+   # Elasticsearch Managed OpenTelemetry endpoint
+   ELASTIC_OTLP_ENDPOINT=https://abc123def456.apm.us-central1.gcp.cloud.es.io
+
+   # API Key or Secret Token
+   ELASTIC_OTLP_TOKEN=your_api_key_or_secret_token
+
+   # Deployment environment
+   DEPLOYMENT_ENVIRONMENT=production
+   ```
+
+3. **Start the services**:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Verify telemetry is flowing**:
+   ```bash
+   # Check OTel Collector logs
+   docker-compose logs -f otel-collector
+
+   # Look for successful exports to Elasticsearch
+   # Should see: "Traces export: OK" or similar
+   ```
+
+### Accessing Observability in Kibana
+
+Once telemetry is flowing, access your observability data in Kibana:
+
+#### APM UI (Application Performance Monitoring)
+- **URL**: `https://your-deployment.kb.<region>.cloud.es.io/app/apm`
+- **Features**:
+  - Service overview and dependencies
+  - Distributed traces
+  - Transaction breakdowns
+  - Error tracking
+  - Service maps
+  - Latency percentiles (P50, P95, P99)
+
+#### Logs Explorer
+- **URL**: `https://your-deployment.kb.<region>.cloud.es.io/app/logs`
+- **Features**:
+  - Centralized log viewing
+  - Trace correlation (jump from logs to traces)
+  - Advanced filtering and search
+  - Log anomalies
+
+#### Metrics Explorer
+- **URL**: `https://your-deployment.kb.<region>.cloud.es.io/app/metrics`
+- **Features**:
+  - Infrastructure metrics
+  - Application metrics
+  - Custom dashboards
+  - Alerting
+
+#### OTel Collector Health (Local)
 - Health check: http://localhost:13133
+- Collector metrics: http://localhost:8888/metrics
 - zPages diagnostics: http://localhost:55679/debug/tracez
 
 ## Example Queries
