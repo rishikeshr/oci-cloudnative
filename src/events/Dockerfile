@@ -8,8 +8,12 @@ ARG TARGETARCH
 
 RUN apk add --no-cache ca-certificates git
 WORKDIR /src
-COPY *.go ./
 COPY go.* ./
+
+# Download dependencies first
+RUN go mod download
+
+COPY *.go ./
 COPY cmd cmd
 
 # Build service
