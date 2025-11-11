@@ -1,6 +1,6 @@
 module mushop/events
 
-go 1.13
+go 1.20
 
 require (
 	github.com/Shopify/sarama v1.38.1
