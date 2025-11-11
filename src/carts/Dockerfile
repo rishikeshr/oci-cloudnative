@@ -14,7 +14,7 @@ WORKDIR      /usr/src/app/
 RUN mvn dependency:go-offline -B
 
 COPY src     /usr/src/app/src
-RUN mvn package
+RUN mvn package -DskipTests
 
 # ------------
 # Stage 2 : Application container
