@@ -30,7 +30,8 @@ ARG ELASTIC_OTEL_AGENT_VERSION=1.7.0
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Download Elastic OTel Java Agent (EDOT)
-RUN curl -L -o /app/elastic-otel-javaagent.jar \
+RUN mkdir -p /app && \
+    curl -L -o /app/elastic-otel-javaagent.jar \
     https://repo1.maven.org/maven2/co/elastic/otel/elastic-otel-javaagent/${ELASTIC_OTEL_AGENT_VERSION}/elastic-otel-javaagent-${ELASTIC_OTEL_AGENT_VERSION}.jar
 
 # Copy the generated shadow JAR (fat jar)
