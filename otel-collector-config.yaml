@@ -1,0 +1,103 @@
+# OpenTelemetry Collector Configuration for MuShop
+# Receives telemetry from EDOT-instrumented services and exports to Jaeger
+
+receivers:
+  # OTLP receiver for traces, metrics, and logs
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Batch processor - improves performance by batching telemetry
+  batch:
+    timeout: 10s
+    send_batch_size: 1024
+
+  # Memory limiter prevents OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+
+  # Resource detection adds cloud/container metadata
+  resourcedetection:
+    detectors: [env, system, docker]
+    timeout: 5s
+
+  # Add service metadata
+  resource:
+    attributes:
+      - key: service.namespace
+        value: mushop
+        action: upsert
+      - key: deployment.environment
+        value: local-docker
+        action: upsert
+
+exporters:
+  # Export traces to Jaeger
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Export metrics to Prometheus
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: mushop
+
+  # Debug/logging exporter for troubleshooting
+  logging:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+  # Optional: Export to Elastic APM Server (if available)
+  # otlp/elastic:
+  #   endpoint: ${ELASTIC_APM_SERVER_URL}
+  #   headers:
+  #     Authorization: "Bearer ${ELASTIC_APM_SECRET_TOKEN}"
+
+extensions:
+  # Health check endpoint
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+  # Performance profiling
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+  # zPages for diagnostics
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, resourcedetection, batch]
+      exporters: [otlp/jaeger, logging]
+
+    # Metrics pipeline
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, resourcedetection, batch]
+      exporters: [prometheus, logging]
+
+    # Logs pipeline
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, resourcedetection, batch]
+      exporters: [logging]
+
+  # Telemetry configuration for the collector itself
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888
