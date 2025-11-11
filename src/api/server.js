@@ -2,6 +2,9 @@
  * Copyright © 2019, Oracle and/or its affiliates. All rights reserved.
  * The Universal Permissive License (UPL), Version 1.0
  */
+// EDOT instrumentation must be loaded first
+require('./tracing');
+
 const app = require('./app');
 const config = require("./config");
 
