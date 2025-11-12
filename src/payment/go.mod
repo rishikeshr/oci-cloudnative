@@ -19,7 +19,7 @@ require (
 	github.com/sony/gobreaker v0.4.1 // indirect
 	github.com/streadway/handy v0.0.0-20190108123426-d5acb3125c2a
 	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
-	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
+	github.com/uber/jaeger-lib v1.5.1-0.20181102163054-1fc5c315e03c // indirect
 	github.com/weaveworks/common v0.0.0-20190714171817-ddeaa31513fd
 	github.com/weaveworks/promrus v1.2.0 // indirect
 	go.opentelemetry.io/otel v1.24.0
@@ -33,3 +33,6 @@ require (
 
 // Replace directive to fix hdrhistogram module path issue
 replace github.com/codahale/hdrhistogram => github.com/HdrHistogram/hdrhistogram-go v1.1.2
+
+// Replace directive to pin jaeger-lib to version with metrics/testutils package
+replace github.com/uber/jaeger-lib => github.com/uber/jaeger-lib v1.5.1-0.20181102163054-1fc5c315e03c
