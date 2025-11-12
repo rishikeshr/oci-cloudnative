@@ -1,4 +1,4 @@
-import * as morgan from 'morgan';
+import morgan from 'morgan';
 import { RequestHandler } from 'express';
 import { AppConfig } from '../../config/app';
 
