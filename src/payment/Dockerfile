@@ -4,7 +4,7 @@
 # 
 
 ##### Go Builder image
-FROM --platform=${TARGETPLATFORM:-linux/amd64} golang:1.16 AS go-builder
+FROM --platform=${TARGETPLATFORM:-linux/amd64} golang:1.20 AS go-builder
 
 ARG TARGETOS
 ARG TARGETARCH
