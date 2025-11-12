@@ -9,11 +9,14 @@ ARG TARGETARCH
 RUN apk add --no-cache ca-certificates git
 WORKDIR /src
 
+# Copy go.mod first to cache dependencies
+COPY go.mod .
+
+# Download dependencies (this will generate go.sum)
+RUN go mod download
+
 # Copy all source files
 COPY . .
-
-# Download dependencies
-RUN go mod download
 
 # Build service
 RUN GO111MODULE=on GOARCH=${TARGETARCH:-amd64} CGO_ENABLED=0 GOOS=linux \
