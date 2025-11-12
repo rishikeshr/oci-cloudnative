@@ -30,3 +30,6 @@ require (
 	golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
 	google.golang.org/grpc v1.22.1 // indirect
 )
+
+// Replace directive to fix hdrhistogram module path issue
+replace github.com/codahale/hdrhistogram => github.com/HdrHistogram/hdrhistogram-go v1.1.2
