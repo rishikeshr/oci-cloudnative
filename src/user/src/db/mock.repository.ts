@@ -28,8 +28,8 @@ export class MockRepository extends Repository<any> {
 
   /**
    * overload the readonly Repository.manager property
+   * Note: Removed setter to maintain TypeScript 4.x compatibility
    */
-  public set manager(m: MockEntityManager) { /* noop */ }
   public get manager(): MockEntityManager {
     return MockEntityManager.manage(this.metadata.target as any, this.metadata.name);
   }

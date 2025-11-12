@@ -33,3 +33,6 @@ require (
 	google.golang.org/grpc v1.27.1 // indirect
 
 )
+
+// Replace directive to fix hdrhistogram module path issue
+replace github.com/codahale/hdrhistogram => github.com/HdrHistogram/hdrhistogram-go v1.1.2
