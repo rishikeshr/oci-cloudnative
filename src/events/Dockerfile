@@ -12,8 +12,7 @@ WORKDIR /src
 # Copy all source files
 COPY . .
 
-# Ensure all dependencies are downloaded and go.sum is complete
-RUN go mod tidy
+# Download dependencies
 RUN go mod download
 
 # Build service
