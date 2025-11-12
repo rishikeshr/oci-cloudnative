@@ -16,6 +16,10 @@ COPY *.go .
 COPY go.mod .
 COPY go.sum .
 
+# Download dependencies and update go.sum
+RUN go mod tidy
+RUN go mod download
+
 # Build Payment service
 RUN GOARCH=${TARGETARCH:-amd64} CGO_ENABLED=0 GOOS=${TARGETOS:-linux} \
     go build -a \
