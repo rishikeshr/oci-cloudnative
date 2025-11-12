@@ -20,6 +20,9 @@ COPY *.go .
 COPY go.mod .
 COPY go.sum .
 
+# Download dependencies
+RUN go mod download
+
 # Build Catalogue service
 RUN GOARCH=${TARGETARCH:-amd64} GOOS=${TARGETOS:-linux} \
   go build -a \
