@@ -1,7 +1,6 @@
 import { Provider, Logger } from '@nestjs/common';
 import { getRepositoryToken, getEntityManagerToken } from '@nestjs/typeorm';
 import { Repository, EntityRepository, ObjectLiteral, EntityManager, getCustomRepository, ObjectType } from 'typeorm';
-import { MockEntityManager } from './mock.manager';
 
 /**
  * Creates a mock repository for a TypeORM entity
@@ -27,11 +26,9 @@ export class MockRepository extends Repository<any> {
   }
 
   /**
-   * overload the readonly Repository.manager property
-   * Note: Removed setter to maintain TypeScript 4.x compatibility
+   * Note: Removed manager property override for TypeScript 4.x compatibility.
+   * TypeScript 4.x does not allow overriding a regular property with an accessor.
+   * The base Repository.manager property is used instead.
    */
-  public get manager(): MockEntityManager {
-    return MockEntityManager.manage(this.metadata.target as any, this.metadata.name);
-  }
 
 }
