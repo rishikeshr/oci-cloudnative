@@ -17,6 +17,7 @@ COPY go.mod .
 COPY go.sum .
 
 # Download dependencies and update go.sum
+RUN go mod tidy
 RUN go mod download
 
 # Build Payment service

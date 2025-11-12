@@ -21,6 +21,7 @@ COPY go.mod .
 COPY go.sum .
 
 # Download dependencies
+RUN go mod tidy
 RUN go mod download
 
 # Build Catalogue service
